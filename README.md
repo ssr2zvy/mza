@@ -10,19 +10,25 @@
 
 - Entrypoint is "making-artifacts/build.sh" for unix based systems and "making-artifacts/build.ps1" for windows
 - Requirements before execution of entrypoint include Rust (compiles), Zig (allows linking), cargo-zigbuild (Rust module to use Zig's linking)
-- Artifacts will be output to tooling/making-artifacts/artifacts/
+- Artifacts will be output to the directory configured via `artifact_output_path` in artifacts.toml
 
 ## Description of Fields in artifacts.toml
+
+### Top level fields
+
+| Field | Requirement | Description |
+|---|---|---|
+| `artifact_output_path` | mandatory | Absolute path, or relative path from making-rust-artifacts/, of the directory produced artifact(s) will be placed in |
 
 ### `[[artifact]]` (can define more than one)
 
 | Field | Requirement | Description |
 |---|---|---|
 | `label` | optional | Non functional label |
-| `manifest` | mandatory | Relative path from making-rust-artifacts/ to Cargo.toml of the crate the artifact will be built from |
+| `crate` | mandatory | Absolute path, or relative path from making-rust-artifacts/, to the crate directory the artifact will be built from. The directory must contain a Cargo.toml |
 | `type` | mandatory | Classification of artifact type, must be "release", "snapshot", or "custom" |
 | `version` | mandatory | Version number |
-| `name` | optional | File name of produced artifact, replacing name defined in either "[[bin]]" or "[[package]]" of manifest |
+| `name` | optional | File name of produced artifact, replacing name defined in either "[[bin]]" or "[[package]]" of crate manifest |
 | `exclude` | optional | array of "label" value(s) from "[[target]](s)" to exclude the corresponding Target for this given artifact. |
 
 ### `[[target]]` (can define more than one)
