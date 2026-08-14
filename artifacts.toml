@@ -1,9 +1,22 @@
-artifact_output_path = "../../artifacts"
+[[artifact]]
+label = "lexicon_cli"
+crate = "../../lexicon-cli"
+artifact_output_path = "../../artifacts/"
+type = "custom"
+version = "0.1.0"
 
 [[artifact]]
-label = "lexicon-cli"
-crate = "../../lexicon-cli"
-type = "release"
+label = "lexicon_framework"
+crate = "../../lexicon-framework"
+artifact_output_path = "../../artifacts/"
+type = "custom"
+version = "0.1.0"
+
+[[artifact]]
+label = "lexicon_installer"
+crate = "../../lexicon-installer"
+artifact_output_path = "../../artifacts/"
+type = "custom"
 version = "0.1.0"
 
 [[target]]

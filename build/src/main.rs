@@ -1,11 +1,13 @@
+use tar::Builder;
 use serde::Deserialize;
 use std::fs;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use xz2::write::XzEncoder;
 
 #[derive(Debug, Deserialize)]
 struct ArtifactsFile {
-    artifact_output_path: String,
     #[serde(default)]
     artifact: Vec<Artifact>,
     #[serde(default)]
@@ -17,6 +19,7 @@ struct Artifact {
     label: Option<String>,
     #[serde(rename = "crate")]
     crate_path: String,
+    artifact_output_path: String,
     r#type: ArtifactType,
     version: String,
     name: Option<String>,
@@ -27,9 +30,19 @@ struct Artifact {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ArtifactType {
-    Release,
+    Main,
     Snapshot,
     Custom,
+}
+
+impl ArtifactType {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Main => "main",
+            Self::Snapshot => "snapshot",
+            Self::Custom => "custom",
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,6 +74,15 @@ impl Artifact {
             .label
             .as_ref()
             .is_some_and(|label| self.exclude.iter().any(|excluded| excluded == label))
+    }
+
+    fn output_path(&self, artifacts_dir: &Path) -> PathBuf {
+        let path = Path::new(&self.artifact_output_path);
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            artifacts_dir.join(path)
+        }
     }
 }
 
@@ -119,11 +141,34 @@ fn ensure_rustup_target(triple: &str) -> Result<(), String> {
         .ok_or_else(|| format!("\"rustup target add {triple}\" failed"))
 }
 
+fn package_binary(
+    compiled_binary: &Path,
+    archive_path: &Path,
+    archive_root: &str,
+    binary_name: &str,
+) -> Result<(), String> {
+    let archive_file = File::create(archive_path)
+        .map_err(|err| format!("Failed to create {}: {err}", archive_path.display()))?;
+    let mut archive = Builder::new(XzEncoder::new(archive_file, 6));
+
+    archive
+        .append_path_with_name(compiled_binary, Path::new(archive_root).join(binary_name))
+        .map_err(|err| format!("Failed to add {} to archive: {err}", compiled_binary.display()))?;
+
+    let encoder = archive
+        .into_inner()
+        .map_err(|err| format!("Failed to finish {}: {err}", archive_path.display()))?;
+    encoder
+        .finish()
+        .map_err(|err| format!("Failed to finish {}: {err}", archive_path.display()))?;
+
+    Ok(())
+}
+
 fn build_artifact(
     artifact: &Artifact,
     target: &Target,
     artifacts_dir: &Path,
-    output_dir: &Path,
 ) -> Result<(), String> {
     let manifest_path = artifact.manifest_path(artifacts_dir)?;
     let triple = target.triple()?;
@@ -165,20 +210,23 @@ fn build_artifact(
         bin_name
     };
     let compiled_binary = target_dir.join(&triple).join("release").join(&bin_file_name);
-
-    fs::create_dir_all(output_dir)
-        .map_err(|err| format!("Failed to create output directory {}: {err}", output_dir.display()))?;
-
     let output_name = artifact.name.clone().unwrap_or(bin_file_name);
-    let output_path = output_dir.join(&output_name);
+    let label = artifact
+        .label
+        .as_deref()
+        .ok_or_else(|| format!("Artifact for {} is missing a label", manifest_path.display()))?;
+    let archive_root = format!("{}-{}", output_name, artifact.version);
+    let archive_stem = format!("{}-{}-{}", output_name, artifact.version, triple);
+    let output_dir = artifact
+        .output_path(artifacts_dir)
+        .join(label)
+        .join(artifact.r#type.as_str())
+        .join(&artifact.version);
+    let archive_path = output_dir.join(format!("{archive_stem}.tar.xz"));
 
-    fs::copy(&compiled_binary, &output_path).map_err(|err| {
-        format!(
-            "Failed to copy {} to {}: {err}",
-            compiled_binary.display(),
-            output_path.display()
-        )
-    })?;
+    fs::create_dir_all(&output_dir)
+        .map_err(|err| format!("Failed to create output directory {}: {err}", output_dir.display()))?;
+    package_binary(&compiled_binary, &archive_path, &archive_root, &output_name)?;
 
     Ok(())
 }
@@ -197,22 +245,13 @@ fn main() {
         .parent()
         .expect("artifacts.toml must have a parent directory");
 
-    let output_dir = {
-        let path = Path::new(&artifacts_file.artifact_output_path);
-        if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            artifacts_dir.join(path)
-        }
-    };
-
     for artifact in &artifacts_file.artifact {
         for target in &artifacts_file.target {
             if artifact.is_excluded(target) {
                 continue;
             }
 
-            build_artifact(artifact, target, artifacts_dir, &output_dir)
+            build_artifact(artifact, target, artifacts_dir)
                 .unwrap_or_else(|err| panic!("{err}"));
         }
     }
