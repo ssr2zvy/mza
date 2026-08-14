@@ -108,7 +108,7 @@ function interface {
 
     function entry {
         param([string[]]$Arguments)
-        cargo run --manifest-path (Join-Path $ReleasesDirLocation "build/Cargo.toml") -- @Arguments | Out-Host
+        cargo run --manifest-path (Join-Path $ReleasesDirLocation "Cargo.toml") -- @Arguments | Out-Host
         return ($LASTEXITCODE -eq 0)
     }
 

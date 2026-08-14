@@ -3,21 +3,12 @@ label = "lexicon_cli"
 crate = "../../lexicon-cli"
 artifact_output_path = "../../artifacts/"
 type = "custom"
-version = "0.1.0"
 
 [[artifact]]
 label = "lexicon_framework"
 crate = "../../lexicon-framework"
 artifact_output_path = "../../artifacts/"
 type = "custom"
-version = "0.1.0"
-
-[[artifact]]
-label = "lexicon_installer"
-crate = "../../lexicon-installer"
-artifact_output_path = "../../artifacts/"
-type = "custom"
-version = "0.1.0"
 
 [[target]]
 label = "linux-x86_64-musl"
@@ -25,4 +16,13 @@ os = "linux"
 arch = "x86_64"
 environment = "musl"
 
-
+[[bundle]]
+label = "lexicon"
+crate = "../.."
+artifact_output_path = "../../artifacts/"
+type = "custom"
+protocol = "cargo-embdedded-bundle-v0.1.0"
+inputs = [
+    "lexicon_cli",
+    "lexicon_framework",
+]

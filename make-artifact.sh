@@ -84,7 +84,7 @@ interface() {
     log_interface "Executing build interface"
     entry() {
         cargo run \
-            --manifest-path "$RELEASES_DIR_LOCATION/build/Cargo.toml" \
+            --manifest-path "$RELEASES_DIR_LOCATION/Cargo.toml" \
             -- "$@"
     }
     if entry "$@"; then
