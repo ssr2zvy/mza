@@ -10,14 +10,16 @@
 
 - Entrypoint is "making-artifacts/make-artifact.sh" for unix based systems and "making-artifacts/make-artifact.ps1" for windows
 - Requirements before execution of entrypoint include Rust (compiles), Zig (allows linking), cargo-zigbuild (Rust module to use Zig's linking)
+- Every cargo invocation uses `--locked`, so every crate built or run by this tool (artifacts, and bundle crates for either protocol) must have an up-to-date, committed `Cargo.lock`.
 - Each artifact is packaged as `<artifact_output_path>/<label>/<type>/<crate-version>/<name>-<crate-version>-<target-triple>.tar.xz`, using the version declared in the crate's `Cargo.toml`.
 
 ## Bundling
 
-- A `[[bundle]]` packages the archives of one or more `[[artifact]](s)` into another Rust crate, rather than shipping the artifacts on their own.
-- All of a bundle's `inputs` must apply to the exact same set of `[[target]](s)` (accounting for each artifact's `exclude`); this is validated when `artifacts.toml` is parsed.
+- A `[[bundle]]` packages the archives of one or more `[[artifact]](s)` into a final bundle output, rather than shipping the artifacts on their own.
+- Every bundle is packaged as `<artifact_output_path>/<label>/<type>/<protocol>/<crate-version>/<target-triple>/<label>-<crate-version>-<target-triple>.tar.xz` — the protocol id occupies the position after `type`, and the target triple gets its own directory level in addition to the filename.
 - `protocol` selects which bundling contract the bundle's crate implements. Each protocol has its own doc under `docs/protocols/`:
-  - `cargo-bundler-v0.1.0` ([docs/protocols/cargo-bundler-v0.1.0.md](docs/protocols/cargo-bundler-v0.1.0.md)) — use this when the bundling itself will be done by another Rust crate, compiled and archived the same way as an artifact.
+  - `cargo-bundler-v0.1.0` ([docs/protocols/cargo-bundler-v0.1.0.md](docs/protocols/cargo-bundler-v0.1.0.md)) — use this when the bundling itself will be done by another Rust crate, cross-compiled and archived the same way as an artifact. Targets are derived from the set shared by all `inputs` (accounting for each artifact's `exclude`); this is validated when `artifacts.toml` is parsed.
+  - `command-bundle-v1` ([docs/protocols/command-bundle-v1.md](docs/protocols/command-bundle-v1.md)) — use this when the final packaging is produced by an external, project-specific system driven by a small Rust adapter crate that runs on the build host (never cross-compiled). Requires `build_targets`.
 - Bundle failures during `--build` exit with code `2` (distinct from artifact build failures, which exit with code `1`) so it's clear whether the failure happened before or during bundling.
 
 ## Description of Fields in artifacts.toml
@@ -52,3 +54,4 @@
 | `type` | mandatory | Classification of bundle type, must be "main", "snapshot", or "custom" |
 | `protocol` | mandatory | Identifies which bundling implementation (defined outside this codebase) is responsible for producing this bundle |
 | `inputs` | mandatory | array of `label` value(s) from `[[artifact]](s)` that make up the contract of artifacts this bundle consumes |
+| `build_targets` | required by some protocols (e.g. `command-bundle-v1`); optional otherwise | array of exact target triples (e.g. `"x86_64-unknown-linux-musl"`) this bundle must be produced for. Every input artifact must provide every listed triple. When omitted, targets are instead derived from the set shared by all `inputs`. |

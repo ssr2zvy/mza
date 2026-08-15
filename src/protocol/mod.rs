@@ -1,4 +1,6 @@
 mod cargo_bundler_v0_1_0;
+mod command_bundle_v1;
+mod shared;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -18,6 +20,9 @@ pub fn run_bundle(
     match bundle.protocol.as_str() {
         cargo_bundler_v0_1_0::PROTOCOL_ID => {
             cargo_bundler_v0_1_0::run(bundle, target, artifacts_dir, run_id, archive_paths)
+        }
+        command_bundle_v1::PROTOCOL_ID => {
+            command_bundle_v1::run(bundle, target, artifacts_dir, run_id, archive_paths)
         }
         other => Err(RunError::new(
             ErrorCode::BundleUnknownProtocol,

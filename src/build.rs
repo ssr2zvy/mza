@@ -5,6 +5,7 @@ use std::process::Command;
 use crate::archive::package_binary;
 use crate::error::{ErrorCode, RunError};
 use crate::parser::{Artifact, Target};
+use crate::shared::{ensure_cargo_lock, ensure_dir_all, resolve_dir};
 
 pub fn is_excluded(artifact: &Artifact, target: &Target) -> bool {
     target
@@ -14,12 +15,7 @@ pub fn is_excluded(artifact: &Artifact, target: &Target) -> bool {
 }
 
 fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, RunError> {
-    let crate_dir = Path::new(&artifact.crate_path);
-    let crate_dir = if crate_dir.is_absolute() {
-        crate_dir.to_path_buf()
-    } else {
-        artifacts_dir.join(crate_dir)
-    };
+    let crate_dir = resolve_dir(&artifact.crate_path, artifacts_dir);
     let manifest_path = crate_dir.join("Cargo.toml");
 
     manifest_path.is_file().then_some(manifest_path.clone()).ok_or_else(|| {
@@ -31,12 +27,7 @@ fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, R
 }
 
 fn output_path(artifact: &Artifact, artifacts_dir: &Path) -> PathBuf {
-    let path = Path::new(&artifact.artifact_output_path);
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        artifacts_dir.join(path)
-    }
+    resolve_dir(&artifact.artifact_output_path, artifacts_dir)
 }
 
 pub fn triple(target: &Target) -> Result<String, RunError> {
@@ -139,6 +130,7 @@ pub fn build_artifact(artifact: &Artifact, target: &Target, artifacts_dir: &Path
     let target_dir = artifacts_dir.join("target_artifacts").join(&triple);
 
     ensure_rustup_target(&triple)?;
+    ensure_cargo_lock(&manifest_path)?;
 
     let native_macos = is_native_macos(target);
     let mut command = Command::new("cargo");
@@ -151,6 +143,7 @@ pub fn build_artifact(artifact: &Artifact, target: &Target, artifacts_dir: &Path
 
     command
         .arg("--release")
+        .arg("--locked")
         .arg("--target")
         .arg(&triple)
         .arg("--target-dir")
@@ -194,12 +187,7 @@ pub fn build_artifact(artifact: &Artifact, target: &Target, artifacts_dir: &Path
         .join(&version);
     let archive_path = output_dir.join(format!("{archive_stem}.tar.xz"));
 
-    fs::create_dir_all(&output_dir).map_err(|err| {
-        RunError::new(
-            ErrorCode::ArtifactArchiveFailed,
-            format!("Failed to create output directory {}: {err}", output_dir.display()),
-        )
-    })?;
+    ensure_dir_all(&output_dir, ErrorCode::ArtifactArchiveFailed)?;
     package_binary(&compiled_binary, &archive_path, &archive_root, &output_name)
         .map_err(|err| RunError::new(ErrorCode::ArtifactArchiveFailed, err))?;
 

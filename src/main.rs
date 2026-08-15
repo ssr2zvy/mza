@@ -4,6 +4,7 @@ mod error;
 mod parser;
 mod protocol;
 mod run_record;
+mod shared;
 
 use std::collections::HashMap;
 use std::fs;
@@ -117,6 +118,20 @@ fn main() {
     let mut had_bundle_failure = false;
 
     for bundle in &config.bundles {
+        if bundle.protocol == "command-bundle-v1" && bundle.build_targets.is_none() {
+            had_bundle_failure = true;
+            bundle_outcomes.push(BundleOutcome {
+                label: bundle.label.clone(),
+                status: "error".to_string(),
+                error_code: Some(error::ErrorCode::ParseInvalidBundle.as_str().to_string()),
+                message: Some(format!(
+                    "Bundle \"{}\" uses protocol command-bundle-v1, which requires build_targets",
+                    bundle.label.as_deref().unwrap_or("<unlabeled>")
+                )),
+            });
+            continue;
+        }
+
         let bundle_targets = match parser::resolve_bundle_targets(bundle, &config.artifacts, &config.targets) {
             Ok(targets) => targets,
             Err(err) => {

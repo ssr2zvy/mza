@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use super::artifact::{Artifact, ArtifactType};
 use super::target::Target;
+use crate::build;
 use crate::error::{ErrorCode, RunError};
 
 #[derive(Debug, Deserialize)]
@@ -15,6 +16,12 @@ pub struct Bundle {
     pub r#type: ArtifactType,
     pub protocol: String,
     pub inputs: Vec<String>,
+    /// Explicit target triples this bundle must be produced for. When set,
+    /// every input artifact must provide every listed triple (protocols like
+    /// command-bundle-v1 require this); when absent, the targets shared by
+    /// all inputs are derived automatically (as cargo-bundler-v0.1.0 does).
+    #[serde(default)]
+    pub build_targets: Option<Vec<String>>,
 }
 
 pub fn parse(raw: Vec<toml::Value>) -> Result<Vec<Bundle>, RunError> {
@@ -38,9 +45,11 @@ fn applicable_target_labels<'a>(artifact: &Artifact, targets: &'a [Target]) -> B
         .collect()
 }
 
-/// Resolves the [[target]] entries shared by every one of a bundle's inputs.
-/// A bundle's inputs must all apply to the exact same set of targets; this is
-/// a config-level contract, so mismatches are reported as parse errors.
+/// Resolves the [[target]] entries a bundle must build for. When
+/// `build_targets` is set, each listed triple is matched against a
+/// [[target]] and every input must provide it. Otherwise, the [[target]]
+/// entries shared by every input are derived automatically. Both are
+/// config-level contracts, so mismatches are reported as parse errors.
 pub fn resolve_bundle_targets<'a>(
     bundle: &Bundle,
     artifacts: &[Artifact],
@@ -61,11 +70,66 @@ pub fn resolve_bundle_targets<'a>(
                     ),
                 )
             })?;
-        input_artifacts.push(artifact);
+        input_artifacts.push((input_label.as_str(), artifact));
     }
 
+    match &bundle.build_targets {
+        Some(build_targets) => resolve_explicit_targets(bundle_label, &input_artifacts, targets, build_targets),
+        None => resolve_shared_targets(bundle_label, &input_artifacts, targets),
+    }
+}
+
+fn resolve_explicit_targets<'a>(
+    bundle_label: &str,
+    input_artifacts: &[(&str, &Artifact)],
+    targets: &'a [Target],
+    build_targets: &[String],
+) -> Result<Vec<&'a Target>, RunError> {
+    let mut resolved = Vec::with_capacity(build_targets.len());
+
+    for requested_triple in build_targets {
+        let target = targets
+            .iter()
+            .find(|target| build::triple(target).map(|triple| triple == *requested_triple).unwrap_or(false))
+            .ok_or_else(|| {
+                RunError::new(
+                    ErrorCode::ParseInvalidBundle,
+                    format!(
+                        "Bundle \"{bundle_label}\" build_targets entry \"{requested_triple}\" does not match any [[target]]"
+                    ),
+                )
+            })?;
+        let target_label = target.label.as_deref().ok_or_else(|| {
+            RunError::new(
+                ErrorCode::ParseInvalidBundle,
+                format!("Bundle \"{bundle_label}\" build_targets entry \"{requested_triple}\" matches a [[target]] without a label"),
+            )
+        })?;
+
+        for (input_label, artifact) in input_artifacts {
+            if artifact.exclude.iter().any(|excluded| excluded == target_label) {
+                return Err(RunError::new(
+                    ErrorCode::ParseInvalidBundle,
+                    format!(
+                        "Bundle \"{bundle_label}\" cannot be built for \"{requested_triple}\": input artifact \"{input_label}\" does not provide that target"
+                    ),
+                ));
+            }
+        }
+
+        resolved.push(target);
+    }
+
+    Ok(resolved)
+}
+
+fn resolve_shared_targets<'a>(
+    bundle_label: &str,
+    input_artifacts: &[(&str, &Artifact)],
+    targets: &'a [Target],
+) -> Result<Vec<&'a Target>, RunError> {
     let mut shared: Option<BTreeSet<&str>> = None;
-    for artifact in &input_artifacts {
+    for (_, artifact) in input_artifacts {
         let labels = applicable_target_labels(artifact, targets);
         match &shared {
             None => shared = Some(labels),
