@@ -7,7 +7,7 @@ pub struct Artifact {
     pub label: Option<String>,
     #[serde(rename = "crate")]
     pub crate_path: String,
-    pub artifact_output_path: String,
+    pub output_path: String,
     pub r#type: ArtifactType,
     pub name: Option<String>,
     #[serde(default)]
@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn parses_valid_artifact() {
         let value = artifact_toml(
-            "label = \"cli\"\ncrate = \"../cli\"\nartifact_output_path = \"../out\"\ntype = \"custom\"",
+            "label = \"cli\"\ncrate = \"../cli\"\noutput_path = \"../out\"\ntype = \"custom\"",
         );
         let artifacts = parse(vec![value]).unwrap();
         assert_eq!(artifacts.len(), 1);
@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn parses_optional_name_and_exclude() {
         let value = artifact_toml(
-            "label = \"cli\"\ncrate = \"../cli\"\nartifact_output_path = \"../out\"\ntype = \"main\"\nname = \"lexicon\"\nexclude = [\"windows\"]",
+            "label = \"cli\"\ncrate = \"../cli\"\noutput_path = \"../out\"\ntype = \"main\"\nname = \"lexicon\"\nexclude = [\"windows\"]",
         );
         let artifacts = parse(vec![value]).unwrap();
         assert_eq!(artifacts[0].name.as_deref(), Some("lexicon"));
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn rejects_unknown_type() {
-        let value = artifact_toml("label = \"cli\"\ncrate = \"../cli\"\nartifact_output_path = \"../out\"\ntype = \"bogus\"");
+        let value = artifact_toml("label = \"cli\"\ncrate = \"../cli\"\noutput_path = \"../out\"\ntype = \"bogus\"");
         let err = parse(vec![value]).unwrap_err();
         assert_eq!(err.code.as_str(), "PARSE_INVALID_ARTIFACT");
     }

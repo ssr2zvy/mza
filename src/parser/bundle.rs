@@ -12,10 +12,11 @@ pub struct Bundle {
     pub label: Option<String>,
     #[serde(rename = "crate")]
     pub crate_path: String,
-    pub artifact_output_path: String,
+    pub output_path: String,
     pub r#type: ArtifactType,
     pub protocol: String,
     pub inputs: Vec<String>,
+    pub name: Option<String>,
     /// Explicit target triples this bundle must be produced for. When set,
     /// every input artifact must provide every listed triple (protocols like
     /// command-bundle-v1 require this); when absent, the targets shared by
@@ -165,7 +166,7 @@ mod tests {
         Artifact {
             label: Some(label.to_string()),
             crate_path: format!("../{label}"),
-            artifact_output_path: "../out".to_string(),
+            output_path: "../out".to_string(),
             r#type: ArtifactType::Custom,
             name: None,
             exclude: exclude.into_iter().map(str::to_string).collect(),
@@ -185,10 +186,11 @@ mod tests {
         Bundle {
             label: Some("lexicon".to_string()),
             crate_path: "../..".to_string(),
-            artifact_output_path: "../out".to_string(),
+            output_path: "../out".to_string(),
             r#type: ArtifactType::Custom,
             protocol: "cargo-bundler-v0.1.0".to_string(),
             inputs: inputs.into_iter().map(str::to_string).collect(),
+            name: None,
             build_targets: build_targets.map(|list| list.into_iter().map(str::to_string).collect()),
         }
     }
@@ -196,7 +198,7 @@ mod tests {
     #[test]
     fn parses_valid_bundle() {
         let value: toml::Value = toml::from_str(
-            "label = \"lexicon\"\ncrate = \"../..\"\nartifact_output_path = \"../out\"\ntype = \"custom\"\nprotocol = \"cargo-bundler-v0.1.0\"\ninputs = [\"cli\"]",
+            "label = \"lexicon\"\ncrate = \"../..\"\noutput_path = \"../out\"\ntype = \"custom\"\nprotocol = \"cargo-bundler-v0.1.0\"\ninputs = [\"cli\"]",
         )
         .unwrap();
         let bundles = parse(vec![value]).unwrap();
@@ -207,7 +209,7 @@ mod tests {
     #[test]
     fn parses_build_targets_when_present() {
         let value: toml::Value = toml::from_str(
-            "label = \"lexicon\"\ncrate = \"../..\"\nartifact_output_path = \"../out\"\ntype = \"custom\"\nprotocol = \"command-bundle-v1\"\ninputs = [\"cli\"]\nbuild_targets = [\"x86_64-unknown-linux-musl\"]",
+            "label = \"lexicon\"\ncrate = \"../..\"\noutput_path = \"../out\"\ntype = \"custom\"\nprotocol = \"command-bundle-v1\"\ninputs = [\"cli\"]\nbuild_targets = [\"x86_64-unknown-linux-musl\"]",
         )
         .unwrap();
         let bundles = parse(vec![value]).unwrap();

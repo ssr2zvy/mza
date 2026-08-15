@@ -9,7 +9,7 @@ pub fn temp_workspace_dir(run_id: &str, bundle_label: &str, target: &str) -> Pat
     std::env::temp_dir().join("mza").join(run_id).join(bundle_label).join(target)
 }
 
-/// Bundle output directory: <artifact_output_path>/<label>/<type>/<protocol>/<version>/<target>/
+/// Bundle output directory: <output_path>/<label>/<type>/<protocol>/<version>/<target>/
 /// The protocol occupies the position an ordinary artifact's type occupies,
 /// alongside (not replacing) the bundle's own `type`.
 pub fn bundle_output_dir(
@@ -20,7 +20,7 @@ pub fn bundle_output_dir(
     target: &str,
     artifacts_dir: &Path,
 ) -> PathBuf {
-    resolve_dir(&bundle.artifact_output_path, artifacts_dir)
+    resolve_dir(&bundle.output_path, artifacts_dir)
         .join(bundle_label)
         .join(bundle.r#type.as_str())
         .join(protocol_id)
@@ -37,10 +37,11 @@ mod tests {
         Bundle {
             label: Some("lexicon".to_string()),
             crate_path: "../..".to_string(),
-            artifact_output_path: "../out".to_string(),
+            output_path: "../out".to_string(),
             r#type: ArtifactType::Custom,
             protocol: "cargo-bundler-v0.1.0".to_string(),
             inputs: vec!["cli".to_string()],
+            name: None,
             build_targets: None,
         }
     }

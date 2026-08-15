@@ -27,7 +27,7 @@ fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, R
 }
 
 fn output_path(artifact: &Artifact, artifacts_dir: &Path) -> PathBuf {
-    resolve_dir(&artifact.artifact_output_path, artifacts_dir)
+    resolve_dir(&artifact.output_path, artifacts_dir)
 }
 
 pub fn triple(target: &Target) -> Result<String, RunError> {
@@ -212,7 +212,7 @@ mod tests {
         Artifact {
             label: Some("cli".to_string()),
             crate_path: "../cli".to_string(),
-            artifact_output_path: "../out".to_string(),
+            output_path: "../out".to_string(),
             r#type: ArtifactType::Custom,
             name: None,
             exclude: exclude.into_iter().map(str::to_string).collect(),

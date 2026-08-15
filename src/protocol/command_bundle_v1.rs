@@ -156,14 +156,14 @@ pub fn run(
         ));
     }
 
-    let bin_name = bundle_label.to_string();
-    let archive_root = format!("{bin_name}-{version}");
-    let archive_stem = format!("{bin_name}-{version}-{triple}");
+    let output_name = bundle.name.clone().unwrap_or_else(|| bundle_label.to_string());
+    let archive_root = format!("{output_name}-{version}");
+    let archive_stem = format!("{output_name}-{version}-{triple}");
     let output_dir = bundle_output_dir(bundle, bundle_label, PROTOCOL_ID, &version, &triple, artifacts_dir);
     let archive_path = output_dir.join(format!("{archive_stem}.tar.xz"));
 
     ensure_dir_all(&output_dir, ErrorCode::BundleExecutionFailed)?;
-    package_binary(&output_path, &archive_path, &archive_root, &bin_name)
+    package_binary(&output_path, &archive_path, &archive_root, &output_name)
         .map_err(|err| RunError::new(ErrorCode::BundleExecutionFailed, err))?;
 
     Ok(archive_path)

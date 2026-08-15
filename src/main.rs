@@ -194,7 +194,7 @@ fn echo_parsed(config: &ParsedConfig) {
             artifact.label,
             artifact.crate_path,
             artifact.r#type.as_str(),
-            artifact.artifact_output_path,
+            artifact.output_path,
             artifact.name,
             artifact.exclude
         );
@@ -211,11 +211,12 @@ fn echo_parsed(config: &ParsedConfig) {
     println!("Parsed {} bundle(s):", config.bundles.len());
     for bundle in &config.bundles {
         println!(
-            "  - label={:?} crate={} type={} protocol={} inputs={:?}",
+            "  - label={:?} crate={} type={} protocol={} name={:?} inputs={:?}",
             bundle.label,
             bundle.crate_path,
             bundle.r#type.as_str(),
             bundle.protocol,
+            bundle.name,
             bundle.inputs
         );
     }

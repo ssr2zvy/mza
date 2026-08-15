@@ -26,7 +26,7 @@ The bundle's `crate` is the adapter crate (same field Protocol 1 uses); its `Car
 3. Writes `bundle-spec.toml` to a run-scoped temp workspace (shared with Protocol 1): `<system-temp>/mza/<run_id>/<bundle-label>/<target>/bundle-spec.toml`.
 4. Sets `MZA_BUNDLE_SPEC` to that file's absolute path.
 5. Runs `cargo run --release --locked --manifest-path <bundle Cargo.toml>` on the build host (no `--target`, no `cargo zigbuild`).
-6. After the command exits, verifies the file at the spec's `output_path` exists, then archives it the same way an artifact is archived, at `<bundle artifact_output_path>/<label>/<type>/command-bundle-v1/<version>/<target>/<label>-<version>-<target>.tar.xz`.
+6. After the command exits, verifies the file at the spec's `output_path` exists, then archives it the same way an artifact is archived, at `<bundle output_path>/<label>/<type>/command-bundle-v1/<version>/<target>/<label>-<version>-<target>.tar.xz`.
 
 ## `bundle-spec.toml` contract
 

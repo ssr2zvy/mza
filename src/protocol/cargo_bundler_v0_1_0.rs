@@ -149,13 +149,14 @@ pub fn run(
         bin_name.clone()
     };
     let compiled_binary = target_dir.join(&triple).join("release").join(&bin_file_name);
-    let archive_root = format!("{bin_name}-{version}");
-    let archive_stem = format!("{bin_name}-{version}-{triple}");
+    let output_name = bundle.name.clone().unwrap_or(bin_name);
+    let archive_root = format!("{output_name}-{version}");
+    let archive_stem = format!("{output_name}-{version}-{triple}");
     let output_dir = bundle_output_dir(bundle, bundle_label, PROTOCOL_ID, &version, &triple, artifacts_dir);
     let archive_path = output_dir.join(format!("{archive_stem}.tar.xz"));
 
     ensure_dir_all(&output_dir, ErrorCode::BundleExecutionFailed)?;
-    package_binary(&compiled_binary, &archive_path, &archive_root, &bin_name)
+    package_binary(&compiled_binary, &archive_path, &archive_root, &output_name)
         .map_err(|err| RunError::new(ErrorCode::BundleExecutionFailed, err))?;
 
     Ok(archive_path)
