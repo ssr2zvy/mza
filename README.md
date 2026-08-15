@@ -10,7 +10,7 @@
 
 ## 2) Execute make-artifact script
 
-- Entrypoint is "make-artifact.sh" for unix based systems and "make-artifact.ps1" for windows
+- Entrypoint is `make-artifact.sh` for Unix-based systems and `make-artifact.ps1` for Windows
 - Requirements before execution of entrypoint include Rust (compiles), Zig (allows linking), cargo-zigbuild (Rust module to use Zig's linking)
 - Artifact versions come from the artifact crate's `Cargo.toml`. Bundle versions likewise come from the `Cargo.toml` of the protocol-implementing bundle crate; neither version is duplicated in `artifacts.toml`.
 - Bundle-stage failures during --build exit with code 2, distinct from artifact-stage failures, which exit with code 1
