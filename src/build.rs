@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::archive::package_binary;
+use crate::error::{ErrorCode, RunError};
 use crate::parser::{Artifact, Target};
 
 pub fn is_excluded(artifact: &Artifact, target: &Target) -> bool {
@@ -12,7 +13,7 @@ pub fn is_excluded(artifact: &Artifact, target: &Target) -> bool {
         .is_some_and(|label| artifact.exclude.iter().any(|excluded| excluded == label))
 }
 
-fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, String> {
+fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, RunError> {
     let crate_dir = Path::new(&artifact.crate_path);
     let crate_dir = if crate_dir.is_absolute() {
         crate_dir.to_path_buf()
@@ -21,10 +22,12 @@ fn manifest_path(artifact: &Artifact, artifacts_dir: &Path) -> Result<PathBuf, S
     };
     let manifest_path = crate_dir.join("Cargo.toml");
 
-    manifest_path
-        .is_file()
-        .then_some(manifest_path.clone())
-        .ok_or_else(|| format!("Crate directory {} does not contain Cargo.toml", crate_dir.display()))
+    manifest_path.is_file().then_some(manifest_path.clone()).ok_or_else(|| {
+        RunError::new(
+            ErrorCode::ArtifactMissingManifest,
+            format!("Crate directory {} does not contain Cargo.toml", crate_dir.display()),
+        )
+    })
 }
 
 fn output_path(artifact: &Artifact, artifacts_dir: &Path) -> PathBuf {
@@ -36,7 +39,7 @@ fn output_path(artifact: &Artifact, artifacts_dir: &Path) -> PathBuf {
     }
 }
 
-fn triple(target: &Target) -> Result<String, String> {
+pub fn triple(target: &Target) -> Result<String, RunError> {
     let arch = target.arch.as_str();
     let environment = target.environment.as_deref();
 
@@ -48,61 +51,89 @@ fn triple(target: &Target) -> Result<String, String> {
         "windows" => {
             let environment = environment.unwrap_or("gnu");
             if environment != "gnu" {
-                return Err(format!(
-                    "Unsupported windows environment \"{environment}\": only \"gnu\" is supported via Zig"
+                return Err(RunError::new(
+                    ErrorCode::ArtifactUnsupportedTarget,
+                    format!("Unsupported windows environment \"{environment}\": only \"gnu\" is supported via Zig"),
                 ));
             }
             Ok(format!("{arch}-pc-windows-{environment}"))
         }
         "macos" => Ok(format!("{arch}-apple-darwin")),
-        other => Err(format!("Unsupported target os \"{other}\"")),
+        other => Err(RunError::new(
+            ErrorCode::ArtifactUnsupportedTarget,
+            format!("Unsupported target os \"{other}\""),
+        )),
     }
 }
 
-fn is_native_macos(target: &Target) -> bool {
+pub fn is_native_macos(target: &Target) -> bool {
     target.os.eq_ignore_ascii_case("macos") && std::env::consts::OS == "macos"
 }
 
-fn package_metadata(manifest_path: &Path) -> Result<(String, String), String> {
-    let contents = fs::read_to_string(manifest_path)
-        .map_err(|err| format!("Failed to read {}: {err}", manifest_path.display()))?;
-    let manifest: toml::Value = toml::from_str(&contents)
-        .map_err(|err| format!("Failed to parse {}: {err}", manifest_path.display()))?;
+pub fn package_metadata(manifest_path: &Path) -> Result<(String, String), RunError> {
+    let contents = fs::read_to_string(manifest_path).map_err(|err| {
+        RunError::new(
+            ErrorCode::ArtifactMissingPackageMetadata,
+            format!("Failed to read {}: {err}", manifest_path.display()),
+        )
+    })?;
+    let manifest: toml::Value = toml::from_str(&contents).map_err(|err| {
+        RunError::new(
+            ErrorCode::ArtifactMissingPackageMetadata,
+            format!("Failed to parse {}: {err}", manifest_path.display()),
+        )
+    })?;
 
-    let package = manifest
-        .get("package")
-        .ok_or_else(|| format!("{} is missing [package]", manifest_path.display()))?;
+    let package = manifest.get("package").ok_or_else(|| {
+        RunError::new(
+            ErrorCode::ArtifactMissingPackageMetadata,
+            format!("{} is missing [package]", manifest_path.display()),
+        )
+    })?;
     let name = package
         .get("name")
         .and_then(|name| name.as_str())
         .map(str::to_string)
-        .ok_or_else(|| format!("{} is missing [package].name", manifest_path.display()))?;
+        .ok_or_else(|| {
+            RunError::new(
+                ErrorCode::ArtifactMissingPackageMetadata,
+                format!("{} is missing [package].name", manifest_path.display()),
+            )
+        })?;
     let version = package
         .get("version")
         .and_then(|version| version.as_str())
         .map(str::to_string)
-        .ok_or_else(|| format!("{} is missing [package].version", manifest_path.display()))?;
+        .ok_or_else(|| {
+            RunError::new(
+                ErrorCode::ArtifactMissingPackageMetadata,
+                format!("{} is missing [package].version", manifest_path.display()),
+            )
+        })?;
 
     Ok((name, version))
 }
 
-fn ensure_rustup_target(triple: &str) -> Result<(), String> {
+pub fn ensure_rustup_target(triple: &str) -> Result<(), RunError> {
     let status = Command::new("rustup")
         .args(["target", "add", triple])
         .status()
-        .map_err(|err| format!("Failed to run \"rustup target add {triple}\": {err}"))?;
+        .map_err(|err| {
+            RunError::new(
+                ErrorCode::ArtifactRustupFailed,
+                format!("Failed to run \"rustup target add {triple}\": {err}"),
+            )
+        })?;
 
-    status
-        .success()
-        .then_some(())
-        .ok_or_else(|| format!("\"rustup target add {triple}\" failed"))
+    status.success().then_some(()).ok_or_else(|| {
+        RunError::new(
+            ErrorCode::ArtifactRustupFailed,
+            format!("\"rustup target add {triple}\" failed"),
+        )
+    })
 }
 
-pub fn build_artifact(
-    artifact: &Artifact,
-    target: &Target,
-    artifacts_dir: &Path,
-) -> Result<(), String> {
+pub fn build_artifact(artifact: &Artifact, target: &Target, artifacts_dir: &Path) -> Result<PathBuf, RunError> {
     let manifest_path = manifest_path(artifact, artifacts_dir)?;
     let triple = triple(target)?;
     let target_dir = artifacts_dir.join("target_artifacts").join(&triple);
@@ -127,14 +158,19 @@ pub fn build_artifact(
         .arg("--manifest-path")
         .arg(&manifest_path);
 
-    let status = command
-        .status()
-        .map_err(|err| format!("Failed to run cargo for {}/{}: {err}", manifest_path.display(), triple))?;
+    let status = command.status().map_err(|err| {
+        RunError::new(
+            ErrorCode::ArtifactCargoInvocationFailed,
+            format!("Failed to run cargo for {}/{}: {err}", manifest_path.display(), triple),
+        )
+    })?;
 
-    status
-        .success()
-        .then_some(())
-        .ok_or_else(|| format!("Build failed for {} targeting {}", manifest_path.display(), triple))?;
+    status.success().then_some(()).ok_or_else(|| {
+        RunError::new(
+            ErrorCode::ArtifactBuildFailed,
+            format!("Build failed for {} targeting {}", manifest_path.display(), triple),
+        )
+    })?;
 
     let (bin_name, version) = package_metadata(&manifest_path)?;
     let bin_file_name = if target.os.eq_ignore_ascii_case("windows") {
@@ -144,10 +180,12 @@ pub fn build_artifact(
     };
     let compiled_binary = target_dir.join(&triple).join("release").join(&bin_file_name);
     let output_name = artifact.name.clone().unwrap_or(bin_file_name);
-    let label = artifact
-        .label
-        .as_deref()
-        .ok_or_else(|| format!("Artifact for {} is missing a label", manifest_path.display()))?;
+    let label = artifact.label.as_deref().ok_or_else(|| {
+        RunError::new(
+            ErrorCode::ArtifactMissingLabel,
+            format!("Artifact for {} is missing a label", manifest_path.display()),
+        )
+    })?;
     let archive_root = format!("{}-{version}", output_name);
     let archive_stem = format!("{}-{version}-{triple}", output_name);
     let output_dir = output_path(artifact, artifacts_dir)
@@ -156,9 +194,14 @@ pub fn build_artifact(
         .join(&version);
     let archive_path = output_dir.join(format!("{archive_stem}.tar.xz"));
 
-    fs::create_dir_all(&output_dir)
-        .map_err(|err| format!("Failed to create output directory {}: {err}", output_dir.display()))?;
-    package_binary(&compiled_binary, &archive_path, &archive_root, &output_name)?;
+    fs::create_dir_all(&output_dir).map_err(|err| {
+        RunError::new(
+            ErrorCode::ArtifactArchiveFailed,
+            format!("Failed to create output directory {}: {err}", output_dir.display()),
+        )
+    })?;
+    package_binary(&compiled_binary, &archive_path, &archive_root, &output_name)
+        .map_err(|err| RunError::new(ErrorCode::ArtifactArchiveFailed, err))?;
 
-    Ok(())
+    Ok(archive_path)
 }

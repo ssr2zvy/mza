@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::error::{ErrorCode, RunError};
+
 #[derive(Debug, Deserialize)]
 pub struct Artifact {
     pub label: Option<String>,
@@ -30,12 +32,15 @@ impl ArtifactType {
     }
 }
 
-pub fn parse(raw: Vec<toml::Value>) -> Result<Vec<Artifact>, String> {
+pub fn parse(raw: Vec<toml::Value>) -> Result<Vec<Artifact>, RunError> {
     raw.into_iter()
         .map(|value| {
-            value
-                .try_into()
-                .map_err(|err| format!("Failed to parse [[artifact]] entry: {err}"))
+            value.try_into().map_err(|err| {
+                RunError::new(
+                    ErrorCode::ParseInvalidArtifact,
+                    format!("Failed to parse [[artifact]] entry: {err}"),
+                )
+            })
         })
         .collect()
 }

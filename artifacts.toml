@@ -21,7 +21,7 @@ label = "lexicon"
 crate = "../.."
 artifact_output_path = "../../artifacts/"
 type = "custom"
-protocol = "cargo-embdedded-bundle-v0.1.0"
+protocol = "cargo-bundler-v0.1.0"
 inputs = [
     "lexicon_cli",
     "lexicon_framework",

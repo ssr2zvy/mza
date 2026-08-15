@@ -12,6 +12,14 @@
 - Requirements before execution of entrypoint include Rust (compiles), Zig (allows linking), cargo-zigbuild (Rust module to use Zig's linking)
 - Each artifact is packaged as `<artifact_output_path>/<label>/<type>/<crate-version>/<name>-<crate-version>-<target-triple>.tar.xz`, using the version declared in the crate's `Cargo.toml`.
 
+## Bundling
+
+- A `[[bundle]]` packages the archives of one or more `[[artifact]](s)` into another Rust crate, rather than shipping the artifacts on their own.
+- All of a bundle's `inputs` must apply to the exact same set of `[[target]](s)` (accounting for each artifact's `exclude`); this is validated when `artifacts.toml` is parsed.
+- `protocol` selects which bundling contract the bundle's crate implements. Each protocol has its own doc under `docs/protocols/`:
+  - `cargo-bundler-v0.1.0` ([docs/protocols/cargo-bundler-v0.1.0.md](docs/protocols/cargo-bundler-v0.1.0.md)) — use this when the bundling itself will be done by another Rust crate, compiled and archived the same way as an artifact.
+- Bundle failures during `--build` exit with code `2` (distinct from artifact build failures, which exit with code `1`) so it's clear whether the failure happened before or during bundling.
+
 ## Description of Fields in artifacts.toml
 
 ### `[[artifact]]` (can define more than one)
