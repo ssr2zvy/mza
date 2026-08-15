@@ -26,3 +26,33 @@ pub fn package_binary(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Read;
+
+    #[test]
+    fn package_binary_produces_a_readable_tar_xz_archive() {
+        let dir = tempfile::tempdir().unwrap();
+        let binary_path = dir.path().join("lexicon_cli");
+        std::fs::write(&binary_path, b"fake binary contents").unwrap();
+        let archive_path = dir.path().join("out.tar.xz");
+
+        package_binary(&binary_path, &archive_path, "lexicon_cli-0.1.0", "lexicon_cli").unwrap();
+
+        let file = File::open(&archive_path).unwrap();
+        let decoder = xz2::read::XzDecoder::new(file);
+        let mut archive = tar::Archive::new(decoder);
+        let mut entries = archive.entries().unwrap();
+
+        let mut entry = entries.next().unwrap().unwrap();
+        assert_eq!(entry.path().unwrap().into_owned(), Path::new("lexicon_cli-0.1.0/lexicon_cli"));
+        let mut contents = String::new();
+        entry.read_to_string(&mut contents).unwrap();
+        assert_eq!(contents, "fake binary contents");
+
+        assert!(entries.next().is_none());
+    }
+}
+

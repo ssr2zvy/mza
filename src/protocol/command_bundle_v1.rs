@@ -19,8 +19,13 @@ pub const PROTOCOL_ID: &str = "command-bundle-v1";
 struct BundleSpec {
     protocol: String,
     bundle: String,
-    target: String,
     output_path: String,
+    bundle_target: BundleTargetSpec,
+}
+
+#[derive(Serialize)]
+struct BundleTargetSpec {
+    target: String,
     #[serde(rename = "inputs")]
     inputs: Vec<BundleSpecInput>,
 }
@@ -29,7 +34,6 @@ struct BundleSpec {
 struct BundleSpecInput {
     label: String,
     archive: String,
-    target: String,
 }
 
 /// Contract: making-rust-artifacts writes a bundle-spec.toml (see
@@ -86,7 +90,6 @@ pub fn run(
         spec_inputs.push(BundleSpecInput {
             label: input_label.clone(),
             archive: archive_path.display().to_string(),
-            target: triple.clone(),
         });
     }
 
@@ -101,9 +104,11 @@ pub fn run(
     let spec = BundleSpec {
         protocol: PROTOCOL_ID.to_string(),
         bundle: bundle_label.to_string(),
-        target: triple.clone(),
         output_path: output_path.display().to_string(),
-        inputs: spec_inputs,
+        bundle_target: BundleTargetSpec {
+            target: triple.clone(),
+            inputs: spec_inputs,
+        },
     };
     let spec_contents = toml::to_string_pretty(&spec).map_err(|err| {
         RunError::new(

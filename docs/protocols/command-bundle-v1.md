@@ -33,15 +33,17 @@ The bundle's `crate` is the adapter crate (same field Protocol 1 uses); its `Car
 ```toml
 protocol = "command-bundle-v1"
 bundle = "lexicon"
-target = "x86_64-unknown-linux-musl"
 output_path = "/tmp/mza/<run_id>/lexicon/x86_64-unknown-linux-musl/output/lexicon"
 
-[[inputs]]
+[bundle_target]
+target = "x86_64-unknown-linux-musl"
+
+[[bundle_target.inputs]]
 label = "lexicon-cli"
 archive = "/absolute/path/lexicon-cli-0.1.0-x86_64-unknown-linux-musl.tar.xz"
-target = "x86_64-unknown-linux-musl"
 ```
 
+- `bundle_target.target` is the target this whole bundle execution is producing; each `bundle_target.inputs` entry only needs `label`/`archive` since the target is already established once, at the `[bundle_target]` level.
 - `output_path` is the exact absolute file path the adapter crate must write its final executable to. MZA decides this path; the crate does not choose or report it back — there is no separate result manifest.
 - `MZA_BUNDLE_SPEC` is set to the absolute path of this file; the adapter crate reads it with any TOML parser.
 - After `cargo run` exits `0`, MZA requires `output_path` to exist as a regular file. This is the only success signal: there is no exit-code-plus-manifest handshake beyond "the process succeeded and the file is there."

@@ -193,3 +193,87 @@ pub fn build_artifact(artifact: &Artifact, target: &Target, artifacts_dir: &Path
 
     Ok(archive_path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::ArtifactType;
+
+    fn target(label: Option<&str>, os: &str, arch: &str, environment: Option<&str>) -> Target {
+        Target {
+            label: label.map(str::to_string),
+            os: os.to_string(),
+            arch: arch.to_string(),
+            environment: environment.map(str::to_string),
+        }
+    }
+
+    fn artifact(exclude: Vec<&str>) -> Artifact {
+        Artifact {
+            label: Some("cli".to_string()),
+            crate_path: "../cli".to_string(),
+            artifact_output_path: "../out".to_string(),
+            r#type: ArtifactType::Custom,
+            name: None,
+            exclude: exclude.into_iter().map(str::to_string).collect(),
+        }
+    }
+
+    #[test]
+    fn triple_defaults_linux_environment_to_gnu() {
+        let t = target(Some("t"), "linux", "x86_64", None);
+        assert_eq!(triple(&t).unwrap(), "x86_64-unknown-linux-gnu");
+    }
+
+    #[test]
+    fn triple_uses_explicit_linux_environment() {
+        let t = target(Some("t"), "linux", "aarch64", Some("musl"));
+        assert_eq!(triple(&t).unwrap(), "aarch64-unknown-linux-musl");
+    }
+
+    #[test]
+    fn triple_windows_defaults_to_gnu() {
+        let t = target(Some("t"), "windows", "x86_64", None);
+        assert_eq!(triple(&t).unwrap(), "x86_64-pc-windows-gnu");
+    }
+
+    #[test]
+    fn triple_rejects_non_gnu_windows_environment() {
+        let t = target(Some("t"), "windows", "x86_64", Some("msvc"));
+        assert!(triple(&t).is_err());
+    }
+
+    #[test]
+    fn triple_macos_ignores_environment() {
+        let t = target(Some("t"), "macos", "aarch64", None);
+        assert_eq!(triple(&t).unwrap(), "aarch64-apple-darwin");
+    }
+
+    #[test]
+    fn triple_rejects_unsupported_os() {
+        let t = target(Some("t"), "freebsd", "x86_64", None);
+        assert!(triple(&t).is_err());
+    }
+
+    #[test]
+    fn is_excluded_true_when_target_label_is_excluded() {
+        let t = target(Some("linux-musl"), "linux", "x86_64", Some("musl"));
+        let a = artifact(vec!["linux-musl"]);
+        assert!(is_excluded(&a, &t));
+    }
+
+    #[test]
+    fn is_excluded_false_when_target_label_not_excluded() {
+        let t = target(Some("windows"), "windows", "x86_64", None);
+        let a = artifact(vec!["linux-musl"]);
+        assert!(!is_excluded(&a, &t));
+    }
+
+    #[test]
+    fn is_excluded_false_when_target_has_no_label() {
+        let t = target(None, "linux", "x86_64", Some("musl"));
+        let a = artifact(vec!["linux-musl"]);
+        assert!(!is_excluded(&a, &t));
+    }
+}
+

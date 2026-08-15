@@ -156,3 +156,124 @@ fn resolve_shared_targets<'a>(
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn artifact(label: &str, exclude: Vec<&str>) -> Artifact {
+        Artifact {
+            label: Some(label.to_string()),
+            crate_path: format!("../{label}"),
+            artifact_output_path: "../out".to_string(),
+            r#type: ArtifactType::Custom,
+            name: None,
+            exclude: exclude.into_iter().map(str::to_string).collect(),
+        }
+    }
+
+    fn target(label: &str, os: &str, arch: &str, environment: Option<&str>) -> Target {
+        Target {
+            label: Some(label.to_string()),
+            os: os.to_string(),
+            arch: arch.to_string(),
+            environment: environment.map(str::to_string),
+        }
+    }
+
+    fn bundle(inputs: Vec<&str>, build_targets: Option<Vec<&str>>) -> Bundle {
+        Bundle {
+            label: Some("lexicon".to_string()),
+            crate_path: "../..".to_string(),
+            artifact_output_path: "../out".to_string(),
+            r#type: ArtifactType::Custom,
+            protocol: "cargo-bundler-v0.1.0".to_string(),
+            inputs: inputs.into_iter().map(str::to_string).collect(),
+            build_targets: build_targets.map(|list| list.into_iter().map(str::to_string).collect()),
+        }
+    }
+
+    #[test]
+    fn parses_valid_bundle() {
+        let value: toml::Value = toml::from_str(
+            "label = \"lexicon\"\ncrate = \"../..\"\nartifact_output_path = \"../out\"\ntype = \"custom\"\nprotocol = \"cargo-bundler-v0.1.0\"\ninputs = [\"cli\"]",
+        )
+        .unwrap();
+        let bundles = parse(vec![value]).unwrap();
+        assert_eq!(bundles.len(), 1);
+        assert_eq!(bundles[0].build_targets, None);
+    }
+
+    #[test]
+    fn parses_build_targets_when_present() {
+        let value: toml::Value = toml::from_str(
+            "label = \"lexicon\"\ncrate = \"../..\"\nartifact_output_path = \"../out\"\ntype = \"custom\"\nprotocol = \"command-bundle-v1\"\ninputs = [\"cli\"]\nbuild_targets = [\"x86_64-unknown-linux-musl\"]",
+        )
+        .unwrap();
+        let bundles = parse(vec![value]).unwrap();
+        assert_eq!(bundles[0].build_targets, Some(vec!["x86_64-unknown-linux-musl".to_string()]));
+    }
+
+    #[test]
+    fn resolves_shared_targets_when_inputs_agree() {
+        let artifacts = vec![artifact("cli", vec![]), artifact("framework", vec![])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["cli", "framework"], None);
+
+        let resolved = resolve_bundle_targets(&b, &artifacts, &targets).unwrap();
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].label.as_deref(), Some("linux-musl"));
+    }
+
+    #[test]
+    fn rejects_inputs_with_different_target_sets() {
+        let artifacts = vec![artifact("cli", vec!["linux-musl"]), artifact("framework", vec![])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["cli", "framework"], None);
+
+        let err = resolve_bundle_targets(&b, &artifacts, &targets).unwrap_err();
+        assert_eq!(err.code.as_str(), "PARSE_INVALID_BUNDLE");
+    }
+
+    #[test]
+    fn rejects_unknown_input_label() {
+        let artifacts = vec![artifact("cli", vec![])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["missing"], None);
+
+        let err = resolve_bundle_targets(&b, &artifacts, &targets).unwrap_err();
+        assert_eq!(err.code.as_str(), "PARSE_INVALID_BUNDLE");
+    }
+
+    #[test]
+    fn resolves_explicit_build_targets_matching_triple() {
+        let artifacts = vec![artifact("cli", vec![])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["cli"], Some(vec!["x86_64-unknown-linux-musl"]));
+
+        let resolved = resolve_bundle_targets(&b, &artifacts, &targets).unwrap();
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].label.as_deref(), Some("linux-musl"));
+    }
+
+    #[test]
+    fn rejects_build_targets_entry_with_no_matching_target() {
+        let artifacts = vec![artifact("cli", vec![])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["cli"], Some(vec!["aarch64-unknown-linux-musl"]));
+
+        let err = resolve_bundle_targets(&b, &artifacts, &targets).unwrap_err();
+        assert_eq!(err.code.as_str(), "PARSE_INVALID_BUNDLE");
+    }
+
+    #[test]
+    fn rejects_build_targets_entry_excluded_by_input() {
+        let artifacts = vec![artifact("cli", vec!["linux-musl"])];
+        let targets = vec![target("linux-musl", "linux", "x86_64", Some("musl"))];
+        let b = bundle(vec!["cli"], Some(vec!["x86_64-unknown-linux-musl"]));
+
+        let err = resolve_bundle_targets(&b, &artifacts, &targets).unwrap_err();
+        assert_eq!(err.code.as_str(), "PARSE_INVALID_BUNDLE");
+    }
+}
+
