@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# Execute by running `bash <path to mza>/make-artifact.sh` from any directory
 RELEASES_DIR_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log() {

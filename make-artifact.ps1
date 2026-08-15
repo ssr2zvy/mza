@@ -1,3 +1,4 @@
+# Execute by running `powershell -ExecutionPolicy Bypass -File <path to mza>/make-artifact.ps1` from any directory
 $ReleasesDirLocation = $PSScriptRoot
 
 function log {
