@@ -118,14 +118,14 @@ fn main() {
     let mut had_bundle_failure = false;
 
     for bundle in &config.bundles {
-        if bundle.protocol == "command-bundle-v1" && bundle.build_targets.is_none() {
+        if bundle.protocol == "command-bundler-v0.1.0" && bundle.build_targets.is_none() {
             had_bundle_failure = true;
             bundle_outcomes.push(BundleOutcome {
                 label: bundle.label.clone(),
                 status: "error".to_string(),
                 error_code: Some(error::ErrorCode::ParseInvalidBundle.as_str().to_string()),
                 message: Some(format!(
-                    "Bundle \"{}\" uses protocol command-bundle-v1, which requires build_targets",
+                    "Bundle \"{}\" uses protocol command-bundler-v0.1.0, which requires build_targets",
                     bundle.label.as_deref().unwrap_or("<unlabeled>")
                 )),
             });

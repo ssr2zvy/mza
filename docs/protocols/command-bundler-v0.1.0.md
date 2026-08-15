@@ -1,4 +1,4 @@
-# Protocol: `command-bundle-v1`
+# Protocol: `command-bundler-v0.1.0`
 
 Use this protocol when the final packaging is produced by an external, project-specific system (a native tool, a script, an installer generator, etc.), driven by a small Rust adapter crate that runs on the build host.
 
@@ -26,12 +26,12 @@ The bundle's `crate` is the adapter crate (same field Protocol 1 uses); its `Car
 3. Writes `bundle-spec.toml` to a run-scoped temp workspace (shared with Protocol 1): `<system-temp>/mza/<run_id>/<bundle-label>/<target>/bundle-spec.toml`.
 4. Sets `MZA_BUNDLE_SPEC` to that file's absolute path.
 5. Runs `cargo run --release --locked --manifest-path <bundle Cargo.toml>` on the build host (no `--target`, no `cargo zigbuild`).
-6. After the command exits, verifies the file at the spec's `output_path` exists, then archives it the same way an artifact is archived, at `<bundle output_path>/<label>/<type>/command-bundle-v1/<version>/<target>/<label>-<version>-<target>.tar.xz`.
+6. After the command exits, verifies the file at the spec's `output_path` exists, then archives it the same way an artifact is archived, at `<bundle output_path>/<label>/<type>/command-bundler-v0.1.0/<version>/<target>/<label>-<version>-<target>.tar.xz`.
 
 ## `bundle-spec.toml` contract
 
 ```toml
-protocol = "command-bundle-v1"
+protocol = "command-bundler-v0.1.0"
 bundle = "lexicon"
 output_path = "/tmp/mza/<run_id>/lexicon/x86_64-unknown-linux-musl/output/lexicon"
 

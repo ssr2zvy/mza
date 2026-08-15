@@ -6,7 +6,7 @@
 	- Through [[artifacts]], defining artifact(s) is choosing which Rust projects are in scope to make artifacts for
 	- Through [[targets]], defining target(s) is choosing which OS, Architecture, and toolchains the created artifact(s) will be compatiable with
 	- Through [[bundles]], defining bundle(s) is choosing if you want to bundle artifacts into a final executable, and several bundling protocols are availabe in mza. Refer to implementation details for bundling protocols in docs/protocol/
-- Each type of table element can be added multiple times. Refer to guides for artifact.toml fields in docs/artifact_toml.md
+- Each type of table element can be added multiple times. Refer to guides for artifact.toml fields in docs/artifact_toml/fields.md
 
 ## 2) Execute make-artifact script
 

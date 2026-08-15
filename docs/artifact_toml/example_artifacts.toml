@@ -1,0 +1,38 @@
+# the toml below a) build three artifacts -- two for example 1 and one for example 2 (which excludes the windows target) b) uses protocol 2 and for the linux bundle target we also have artifacts built for that target, so it will successfully parse to bundle both projects in the linux target
+ 
+[[artifact]]
+label = "example1_artifact"
+crate = "./example1"
+output_path = "./artifacts"
+type = "custom"
+
+[[artifact]]
+label = "example2_artifact"
+crate = "./example2"
+output_path = "./artifacts"
+type = "custom"
+exclude = ["windows-x86_64-gnu"]
+
+[[target]]
+label = "linux-x86_64-musl"
+os = "linux"
+arch = "x86_64"
+environment = "musl"
+
+[[target]]
+label = "windows-x86_64-gnu"
+os = "windows"
+arch = "x86_64"
+environment = "gnu"
+
+[[bundle]]
+label = "example1_bundle"
+crate = "./example1"
+output_path = "./artifacts"
+type = "custom"
+protocol = "command-bundle-v0.1.0"
+build_targets = ["linux-x86_64-musl"]
+inputs = [
+    "example1_artifact",
+    "example2_artifact",
+]

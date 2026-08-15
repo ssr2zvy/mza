@@ -19,7 +19,7 @@ pub struct Bundle {
     pub name: Option<String>,
     /// Explicit target triples this bundle must be produced for. When set,
     /// every input artifact must provide every listed triple (protocols like
-    /// command-bundle-v1 require this); when absent, the targets shared by
+    /// command-bundler-v0.1.0 require this); when absent, the targets shared by
     /// all inputs are derived automatically (as cargo-bundler-v0.1.0 does).
     #[serde(default)]
     pub build_targets: Option<Vec<String>>,
@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn parses_build_targets_when_present() {
         let value: toml::Value = toml::from_str(
-            "label = \"lexicon\"\ncrate = \"../..\"\noutput_path = \"../out\"\ntype = \"custom\"\nprotocol = \"command-bundle-v1\"\ninputs = [\"cli\"]\nbuild_targets = [\"x86_64-unknown-linux-musl\"]",
+            "label = \"lexicon\"\ncrate = \"../..\"\noutput_path = \"../out\"\ntype = \"custom\"\nprotocol = \"command-bundler-v0.1.0\"\ninputs = [\"cli\"]\nbuild_targets = [\"x86_64-unknown-linux-musl\"]",
         )
         .unwrap();
         let bundles = parse(vec![value]).unwrap();

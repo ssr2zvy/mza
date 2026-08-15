@@ -13,7 +13,7 @@ use crate::shared::{ensure_cargo_lock, ensure_dir_all, resolve_dir};
 
 use super::shared::{bundle_output_dir, temp_workspace_dir};
 
-pub const PROTOCOL_ID: &str = "command-bundle-v1";
+pub const PROTOCOL_ID: &str = "command-bundler-v0.1.0";
 
 #[derive(Serialize)]
 struct BundleSpec {
@@ -37,7 +37,7 @@ struct BundleSpecInput {
 }
 
 /// Contract: mza writes a bundle-spec.toml (see
-/// docs/protocols/command-bundle-v1.md) and sets MZA_BUNDLE_SPEC to its path,
+/// docs/protocols/command-bundler-v0.1.0.md) and sets MZA_BUNDLE_SPEC to its path,
 /// then runs `cargo run --release --locked --manifest-path <bundle Cargo.toml>`
 /// on the build host (never cross-compiled). The bundle crate reads the spec,
 /// invokes whatever external bundling system it wants, and must write the

@@ -8,7 +8,7 @@ For each `[[target]]` shared by all of a bundle's `inputs`:
 
 1. Resolves the bundle's `crate` to a `Cargo.toml`.
 2. Resolves the `.tar.xz` archive path already produced for each of the bundle's `inputs` for that target (inputs are built as ordinary `[[artifact]](s)` first).
-3. Writes `bundle-spec.toml` (see format below) under `<system-temp>/mza/<run_id>/<bundle-label>/<target>/bundle-spec.toml`, where `<system-temp>` is `std::env::temp_dir()` (OS standard temp directory). This scratch space is shared with `command-bundle-v1`.
+3. Writes `bundle-spec.toml` (see format below) under `<system-temp>/mza/<run_id>/<bundle-label>/<target>/bundle-spec.toml`, where `<system-temp>` is `std::env::temp_dir()` (OS standard temp directory). This scratch space is shared with `command-bundler-v0.1.0`.
 4. Sets the `MZA_BUNDLE_INPUTS` environment variable to the absolute path of that spec file, then runs `cargo zigbuild --release --locked --target <triple> --manifest-path <bundle Cargo.toml>` (or `cargo build` when natively targeting macOS). This requires an up-to-date, committed `Cargo.lock` for the bundle crate.
 5. Archives the resulting binary the same way an artifact is archived, at `<bundle output_path>/<label>/<type>/cargo-bundler-v0.1.0/<version>/<target>/<label>-<version>-<target>.tar.xz`.
 
