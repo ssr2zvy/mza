@@ -36,7 +36,7 @@ struct BundleSpecInput {
     archive: String,
 }
 
-/// Contract: making-rust-artifacts writes a bundle-spec.toml (see
+/// Contract: mza writes a bundle-spec.toml (see
 /// docs/protocols/command-bundle-v1.md) and sets MZA_BUNDLE_SPEC to its path,
 /// then runs `cargo run --release --locked --manifest-path <bundle Cargo.toml>`
 /// on the build host (never cross-compiled). The bundle crate reads the spec,

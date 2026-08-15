@@ -19,7 +19,7 @@ MZA
 
 The bundle's `crate` is the adapter crate (same field Protocol 1 uses); its `Cargo.toml` `[package].name`/`.version` are the authoritative source for the bundle's own name/version, exactly as in Protocol 1. The crate must contain one unambiguous binary target (a single `[[bin]]`, or `default-run` set in `Cargo.toml`).
 
-## What making-rust-artifacts does, per `build_targets` entry
+## What mza does, per `build_targets` entry
 
 1. Resolves the bundle crate's `Cargo.toml` and reads its package name/version.
 2. Resolves each input's already-produced `.tar.xz` archive for the current target.

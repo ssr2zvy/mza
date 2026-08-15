@@ -30,7 +30,7 @@ struct BundleSpecInput {
     archive: String,
 }
 
-/// Contract: making-rust-artifacts writes a bundle-spec.toml (see
+/// Contract: mza writes a bundle-spec.toml (see
 /// docs/protocols/cargo-bundler-v0.1.0.md) and sets MZA_BUNDLE_INPUTS to its
 /// path. Because this crate is only ever compiled for the target (never run
 /// on the build host), the spec is consumed by the crate's own `build.rs`,

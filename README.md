@@ -1,4 +1,4 @@
-# making-rust-artifacts/ allows to build artifacts for Rust projects in the workspace
+# mza/ allows to build artifacts and bundles for Rust projects in the workspace
 
 ## 1) Define your artifact(s) and target(s) in artifacts
 
@@ -29,8 +29,8 @@
 | Field | Requirement | Description |
 |---|---|---|
 | `label` | required | Used to name the artifact directory within `artifact_output_path` |
-| `crate` | mandatory | Absolute path, or relative path from making-rust-artifacts/, to the crate directory the artifact will be built from. The directory must contain a Cargo.toml |
-| `artifact_output_path` | mandatory | Absolute path, or relative path from making-rust-artifacts/, of the directory that will contain all produced artifacts |
+| `crate` | mandatory | Absolute path, or relative path from mza/, to the crate directory the artifact will be built from. The directory must contain a Cargo.toml |
+| `artifact_output_path` | mandatory | Absolute path, or relative path from mza/, of the directory that will contain all produced artifacts |
 | `type` | mandatory | Classification of artifact type, must be "main", "snapshot", or "custom" |
 | `name` | optional | File name of produced artifact, replacing name defined in either "[[bin]]" or "[[package]]" of crate manifest |
 | `exclude` | optional | array of "label" value(s) from "[[target]](s)" to exclude the corresponding Target for this given artifact. |
@@ -49,8 +49,8 @@
 | Field | Requirement | Description |
 |---|---|---|
 | `label` | required | Used to name the bundle directory within `artifact_output_path` |
-| `crate` | mandatory | Absolute path, or relative path from making-rust-artifacts/, to the crate directory the bundle is associated with. The directory must contain a Cargo.toml |
-| `artifact_output_path` | mandatory | Absolute path, or relative path from making-rust-artifacts/, of the directory that will contain produced bundles |
+| `crate` | mandatory | Absolute path, or relative path from mza/, to the crate directory the bundle is associated with. The directory must contain a Cargo.toml |
+| `artifact_output_path` | mandatory | Absolute path, or relative path from mza/, of the directory that will contain produced bundles |
 | `type` | mandatory | Classification of bundle type, must be "main", "snapshot", or "custom" |
 | `protocol` | mandatory | Identifies which bundling implementation (defined outside this codebase) is responsible for producing this bundle |
 | `inputs` | mandatory | array of `label` value(s) from `[[artifact]](s)` that make up the contract of artifacts this bundle consumes |

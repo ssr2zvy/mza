@@ -2,7 +2,7 @@
 
 Use this protocol when a bundle's packaging logic is implemented by another Rust crate, and that crate's compiled output should embed its inputs' bytes directly (not just paths to them), since the crate is only ever cross-compiled by MZA and never executed on the build host.
 
-## What making-rust-artifacts does
+## What mza does
 
 For each `[[target]]` shared by all of a bundle's `inputs`:
 
