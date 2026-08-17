@@ -34,7 +34,7 @@ fn main() {
         Ok(config) => config,
         Err(err) => {
             let outcome = RunOutcome {
-                dry_run: !args.iter().any(|arg| arg == "--build"),
+                dry_run: args.iter().any(|arg| arg == "--dry-run"),
                 artifacts: vec![ArtifactOutcome {
                     label: None,
                     target: None,
@@ -53,9 +53,9 @@ fn main() {
 
     echo_parsed(&config);
 
-    // Chokepoint: building only runs when explicitly requested, so this
-    // binary can be used to inspect parsing without side effects.
-    if !args.iter().any(|arg| arg == "--build") {
+    // Chokepoint: dry-run mode is explicit; without it the tool performs the
+    // actual artifact and bundle build pipeline.
+    if args.iter().any(|arg| arg == "--dry-run") {
         let bundle_outcomes: Vec<BundleOutcome> = config
             .bundles
             .iter()
@@ -74,6 +74,7 @@ fn main() {
         record
             .record_outcome(&outcome)
             .unwrap_or_else(|err| panic!("Failed to record run outcome: {err}"));
+        println!("[LEXICON-BUILD] Dry run completed");
         return;
     }
 
