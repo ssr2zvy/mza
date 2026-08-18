@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -62,25 +61,54 @@ pub fn is_native_macos(target: &Target) -> bool {
 }
 
 pub fn package_metadata(manifest_path: &Path) -> Result<(String, String), RunError> {
-    let contents = fs::read_to_string(manifest_path).map_err(|err| {
+    let output = Command::new("cargo")
+        .args(["metadata", "--no-deps", "--format-version", "1", "--manifest-path"])
+        .arg(manifest_path)
+        .output()
+        .map_err(|err| {
+            RunError::new(
+                ErrorCode::ArtifactMissingPackageMetadata,
+                format!("Failed to run `cargo metadata` for {}: {err}", manifest_path.display()),
+            )
+        })?;
+    if !output.status.success() {
+        return Err(RunError::new(
+            ErrorCode::ArtifactMissingPackageMetadata,
+            format!(
+                "`cargo metadata` failed for {}: {}",
+                manifest_path.display(),
+                String::from_utf8_lossy(&output.stderr)
+            ),
+        ));
+    }
+
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(|err| {
         RunError::new(
             ErrorCode::ArtifactMissingPackageMetadata,
-            format!("Failed to read {}: {err}", manifest_path.display()),
-        )
-    })?;
-    let manifest: toml::Value = toml::from_str(&contents).map_err(|err| {
-        RunError::new(
-            ErrorCode::ArtifactMissingPackageMetadata,
-            format!("Failed to parse {}: {err}", manifest_path.display()),
+            format!("Failed to parse `cargo metadata` output for {}: {err}", manifest_path.display()),
         )
     })?;
 
-    let package = manifest.get("package").ok_or_else(|| {
-        RunError::new(
-            ErrorCode::ArtifactMissingPackageMetadata,
-            format!("{} is missing [package]", manifest_path.display()),
-        )
-    })?;
+    let canonical_manifest_path = manifest_path.canonicalize().unwrap_or_else(|_| manifest_path.to_path_buf());
+    let package = metadata
+        .get("packages")
+        .and_then(|packages| packages.as_array())
+        .and_then(|packages| {
+            packages.iter().find(|package| {
+                package
+                    .get("manifest_path")
+                    .and_then(|value| value.as_str())
+                    .map(Path::new)
+                    .is_some_and(|path| path == canonical_manifest_path)
+            })
+        })
+        .ok_or_else(|| {
+            RunError::new(
+                ErrorCode::ArtifactMissingPackageMetadata,
+                format!("`cargo metadata` did not report a package for {}", manifest_path.display()),
+            )
+        })?;
+
     let name = package
         .get("name")
         .and_then(|name| name.as_str())
